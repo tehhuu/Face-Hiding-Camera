@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Face-hiding Camera</string>
+    <string name="view_photo">Photo</string>
+    <string name="photo_button">Take Picture</string>
+    <string name="rephoto_button">Back</string>
+    <string name="toast_no_activities">No activities for taking photoes</string>
+</resources>

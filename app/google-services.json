@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "975050988553",
+    "firebase_url": "https://face-hiding-camera.firebaseio.com",
+    "project_id": "face-hiding-camera",
+    "storage_bucket": "face-hiding-camera.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:975050988553:android:566fb770215d6240bdecd8",
+        "android_client_info": {
+          "package_name": "jp.ac.titech.tehhuu.face_hiding_camera"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "975050988553-mbgoqururbc4742lesa4tv36dh5768a8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDIpsoGFsNKtkwyKkwXTF6Iq8UfmbROCLg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "975050988553-mbgoqururbc4742lesa4tv36dh5768a8.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
