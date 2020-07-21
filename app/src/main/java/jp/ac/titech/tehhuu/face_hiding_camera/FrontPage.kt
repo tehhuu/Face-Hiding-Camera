@@ -61,16 +61,6 @@ class FrontPage : AppCompatActivity() {
         return FileProvider.getUriForFile(this, "jp.ac.titech.tehhuu.face_hiding_camera", file)
     }
 
-    /*override fun onActivityResult(reqCode: Int, resCode: Int, data: Intent?) {
-        super.onActivityResult(reqCode, resCode, data)
-        if (reqCode == REQ_PHOTO) {
-            if (resCode == Activity.RESULT_OK) {
-                photoImage = data?.extras?.get("data") as Bitmap
-            }
-        }
-    }*/
-
-
     override fun onResume() {
         super.onResume()
 

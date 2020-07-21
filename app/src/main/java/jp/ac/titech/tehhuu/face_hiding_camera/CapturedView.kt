@@ -289,32 +289,6 @@ class CapturedView : AppCompatActivity() {
         }
     }
 
-    /*fun drawWithRect(context: Context, _image : Bitmap, _le_x : Float, _le_y : Float, _re_x : Float, _re_y : Float) {
-        var paint : Paint = Paint()
-        //val image : Bitmap = _image
-        image = _image.copy(_image.getConfig(), true)
-        var le_x = _le_x
-        var le_y = _le_y
-        var re_x = _re_x
-        var re_y = _re_y
-        image?.let {
-            var canvas: Canvas = Canvas(image!!)
-            //fun drawing(){
-            val lineStrokeWidth = 5f
-            // ペイントストロークの太さを設定
-            paint.strokeWidth = lineStrokeWidth
-            // Styleのストロークを設定する
-            paint.style = Paint.Style.FILL
-
-            val ratio = 1
-            paint.color = Color.argb(192, 255, 0, 255)
-            canvas.drawRect(le_x / ratio, le_y / ratio, re_x / ratio, re_y / ratio, paint)
-            val photoView = findViewById<ImageView>(R.id.photo_view2)
-            progressBar.visibility = View.GONE
-            photoView.setImageBitmap(image)
-        }
-    }*/
-
 
     // モザイク処理して描画
     // Show the image after mosaicing
