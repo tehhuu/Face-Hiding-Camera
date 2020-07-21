@@ -219,7 +219,6 @@ class CapturedView : AppCompatActivity() {
                             var mouth_flag = false
 
                             for (face in faces) {
-                                mouth_flag = false
 
                                 // 各顔の口周りの座標を保存
                                 val flag_mouth_bottom = face.getLandmark(FirebaseVisionFaceLandmark.MOUTH_BOTTOM)
