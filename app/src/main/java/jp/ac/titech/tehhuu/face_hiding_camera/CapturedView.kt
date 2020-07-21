@@ -179,7 +179,7 @@ class CapturedView : AppCompatActivity() {
 
     // 描画処理
     private fun showImage(range : String, type : String){
-        if (cameraUri != null) {
+        cameraUri?.let{
             // 撮影画像の URI から Bitmap を取得
             // Get the bitmap of the captured image from URI.
             val stream: InputStream? = this.getContentResolver().openInputStream(cameraUri!!)
@@ -220,7 +220,7 @@ class CapturedView : AppCompatActivity() {
 
                             for (face in faces) {
                                 mouth_flag = false
-                                
+
                                 // 各顔の口周りの座標を保存
                                 val flag_mouth_bottom = face.getLandmark(FirebaseVisionFaceLandmark.MOUTH_BOTTOM)
                                 val flag_mouth_left = face.getLandmark(FirebaseVisionFaceLandmark.MOUTH_LEFT)
