@@ -40,20 +40,24 @@ class CapturedView : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.captured_view)
 
+        // intentから撮影画像のURI, ImageViewのサイズを取得
         cameraUri = intent.data
         width_view = intent.getIntExtra("width_view", 0)
         height_view = intent.getIntExtra("height_view", 0)
 
         progressBar = findViewById<ProgressBar>(R.id.progress_bar)
 
-        showPhoto("Face", "Image")
+        // 描画
+        showImage("Face", "Image")
 
+        // 起動時のページに戻る
         val backButton = findViewById<Button>(R.id.rephoto_button)
         backButton.setOnClickListener {
             val intent = Intent(this, FrontPage::class.java)
             startActivity(intent)
         }
 
+        // 撮影した写真を保存する
         saveButton = findViewById<Button>(R.id.save_button)
         saveButton.setOnClickListener {
             image?.let {
@@ -73,6 +77,7 @@ class CapturedView : AppCompatActivity() {
             }
         }
 
+        // 隠す範囲の顔全体 or 口周辺のみの切り替え
         button_face_or_mouth = findViewById<ToggleButton>(R.id.switch1)
         button_face_or_mouth.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
@@ -85,6 +90,7 @@ class CapturedView : AppCompatActivity() {
             }
         }
 
+        // ふなっしー描画 or モザイク処理 の切り替え
         button_image_or_mosaic = findViewById<ToggleButton>(R.id.switch2)
         button_image_or_mosaic.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
@@ -98,12 +104,9 @@ class CapturedView : AppCompatActivity() {
         }
     }
 
-    private fun createFile(): File {
-        val dir = getExternalFilesDir(Environment.DIRECTORY_DCIM)
 
-        return File(dir, "pid.jpeg")
-    }
-
+    // 写真をギャラリーに保存
+    // Save the image in the Gallety.
     private fun saveImage(bitmap: Bitmap, context: Context, folderName: String) {
         if (android.os.Build.VERSION.SDK_INT >= 29) {
             val values = contentValues()
@@ -155,40 +158,58 @@ class CapturedView : AppCompatActivity() {
         }
     }
 
+
+    // 切り替えボタンが押されたら再描画する
+    // Redraw when the ToggleButons are pressed.
     fun drawAgain(range : String, type : String){
+        // 他のボタンを押せないようにする
         saveButton.setEnabled(false)
         button_face_or_mouth.setEnabled(false)
         button_image_or_mosaic.setEnabled(false)
+        // プログレスバーを表示
         progressBar.visibility = View.VISIBLE
-        showPhoto(range, type)
+        // 描画
+        showImage(range, type)
+        // 描画が終わったら他のボタンを有効にする
         saveButton.setEnabled(true)
         button_face_or_mouth.setEnabled(true)
         button_image_or_mosaic.setEnabled(true)
     }
 
-    private fun showPhoto(range : String, type : String){
-        if (cameraUri != null) {
-            lateinit var bitmap_before : Bitmap
-            val stream: InputStream? = this.getContentResolver().openInputStream(cameraUri!!)
-            bitmap_before = BitmapFactory.decodeStream(BufferedInputStream(stream))
 
-            var bitmap : Bitmap = Bitmap.createScaledBitmap(bitmap_before
+    // 描画処理
+    private fun showImage(range : String, type : String){
+        if (cameraUri != null) {
+            // 撮影画像の URI から Bitmap を取得
+            // Get the bitmap of the captured image from URI.
+            val stream: InputStream? = this.getContentResolver().openInputStream(cameraUri!!)
+            var image_org = BitmapFactory.decodeStream(BufferedInputStream(stream))
+
+            // 画像の横幅が端末のそれと同じサイズになるよう縮小する
+            // これにより描画時間が大幅に削減される
+            // In order to significantly reduce drawing time,
+            // Shrink the image so that its width is the same as that of the screen.
+            var image_resized = Bitmap.createScaledBitmap(image_org
                     , width_view
-                    , (bitmap_before.getHeight() * (width_view.toFloat() / bitmap_before.getWidth())).toInt()
+                    , (image_org.getHeight() * (width_view.toFloat() / image_org.getWidth())).toInt()
                     ,true)
 
+            // Firebase の Detector の Option を設定
             val highAccuracyOpts = FirebaseVisionFaceDetectorOptions.Builder()
                     .setPerformanceMode(FirebaseVisionFaceDetectorOptions.FAST)
                     .setLandmarkMode(FirebaseVisionFaceDetectorOptions.ALL_LANDMARKS)
                     .setClassificationMode(FirebaseVisionFaceDetectorOptions.ALL_CLASSIFICATIONS)
                     .build()
 
-            val image = FirebaseVisionImage.fromBitmap(bitmap)
+            // FirebaseVisonImage に変換
+            val inputImage = FirebaseVisionImage.fromBitmap(image_resized)
 
+            // detectorを作成
             val detector = FirebaseVision.getInstance()
                     .getVisionFaceDetector(highAccuracyOpts)
 
-            detector.detectInImage(image)
+            // 顔検出の処理
+            detector.detectInImage(inputImage)
                         .addOnSuccessListener { faces ->
                             // Task completed successfully
                             // [START_EXCLUDE]
@@ -199,13 +220,11 @@ class CapturedView : AppCompatActivity() {
                             var eyeOpenProb_list = arrayOf<Array<Float>>()
 
                             for (face in faces) {
+                                // 各顔の顔周りの座標を保存
                                 val bounds = face.boundingBox
-                                //val rotY = face.headEulerAngleY // Head is rotated to the right rotY degrees
-                                //val rotZ = face.headEulerAngleZ // Head is tilted sideways rotZ degrees
                                 facePos_list += arrayOf(bounds.left, bounds.top, bounds.right, bounds.bottom)
 
-                                // If landmark detection was enabled (mouth, ears, eyes, cheeks, and
-                                // nose available):
+                                // 各顔の左目・右目の開いている確率を保存
                                 val flag_mouth_bottom = face.getLandmark(FirebaseVisionFaceLandmark.MOUTH_BOTTOM)
                                 val flag_mouth_left = face.getLandmark(FirebaseVisionFaceLandmark.MOUTH_LEFT)
                                 val flag_mouth_right = face.getLandmark(FirebaseVisionFaceLandmark.MOUTH_RIGHT)
@@ -220,35 +239,37 @@ class CapturedView : AppCompatActivity() {
                                     mouthPos_list += arrayOf(mouth_left, top, mouth_right, mouth_bottom)
                                 }
 
-                                // If classification was enabled:
+                                //各顔の笑顔確率を保存
                                 if (face.smilingProbability != FirebaseVisionFace.UNCOMPUTED_PROBABILITY) {
                                     Log.d("debug", "smile")
                                     val smileProb = face.smilingProbability
                                     smileProb_list += smileProb
                                 }
 
+                                // 各顔の左目・右目の開いている確率を保存
                                 if (face.leftEyeOpenProbability != FirebaseVisionFace.UNCOMPUTED_PROBABILITY
                                         && face.rightEyeOpenProbability != FirebaseVisionFace.UNCOMPUTED_PROBABILITY) {
                                     val leftEyeOpenProb = face.leftEyeOpenProbability
                                     val rightEyeOpenProb = face.rightEyeOpenProbability
                                     eyeOpenProb_list += arrayOf(leftEyeOpenProb, rightEyeOpenProb)
                                 }
-
                             }
+
+                            // range, type に応じた描画処理を行う
                             if (range == "Face"){
                                 if (type == "Image") {
-                                    drawingWithMosaic(bitmap, facePos_list, smileProb_list, eyeOpenProb_list)
+                                    drawingWithMask(image_resized, facePos_list, smileProb_list, eyeOpenProb_list)
                                 }
                                 else if (type == "Mosaic") {
-                                    drawingWithMask(bitmap, facePos_list)
+                                    drawingWithMosaic(image_resized, facePos_list)
                                 }
                             }
                             else if (range == "Mouth"){
                                 if (type == "Image") {
-                                    drawingWithMosaic(bitmap, mouthPos_list, smileProb_list, eyeOpenProb_list)
+                                    drawingWithMask(image_resized, mouthPos_list, smileProb_list, eyeOpenProb_list)
                                 }
                                 else if(type == "Mosaic"){
-                                    drawingWithMask(bitmap, mouthPos_list)
+                                    drawingWithMosaic(image_resized, mouthPos_list)
                                 }
                             }
                             // [END get_face_info]
@@ -259,7 +280,6 @@ class CapturedView : AppCompatActivity() {
                             // ...
                         }
         }
-        Log.d("debug", "startActivityForResult()")
     }
 
     /*fun drawWithRect(context: Context, _image : Bitmap, _le_x : Float, _le_y : Float, _re_x : Float, _re_y : Float) {
@@ -288,102 +308,131 @@ class CapturedView : AppCompatActivity() {
         }
     }*/
 
-    fun drawingWithMask(_image : Bitmap, pos_list : Array<Array<Int>>) {
+
+    // モザイク処理して描画
+    // Show the image after mosaicing
+    private fun drawingWithMosaic(_image : Bitmap, pos_list : Array<Array<Int>>) {
+
+        // mutable な画像の取得
+        // Get the mutable image
         image = _image.copy(_image.getConfig(), true)
 
+        // 画像のサイズ取得
         val w = image!!.getWidth()
         val h = image!!.getHeight()
+
+        // 画像の画素情報を取得
         var pixels =  IntArray(w * h)
         image!!.getPixels(pixels, 0, w, 0, 0, w, h)
 
-        val kernel_size = 31
-        val ks_half : Int = kernel_size / 2
-        val kernel_sum = Math.pow(kernel_size.toDouble(), 2.0).toInt()
+        val num_pos = pos_list.size
+        if (num_pos != 0) {
+            // 平均化フィルタのサイズ
+            val kernel_size = 31
+            val ks_half : Int = kernel_size / 2
+            val kernel_sum = Math.pow(kernel_size.toDouble(), 2.0).toInt()
 
-        for (pos in pos_list){
-            val left = pos[0]
-            val top = pos[1]
-            val right = pos[2]
-            val bottom = pos[3]
-            for (x in left..right){
-                for (y in top..bottom){
-                    var average = intArrayOf(0, 0, 0, 0)
-                    for (dx in (-ks_half)..ks_half) {
-                        for (dy in (-ks_half)..ks_half) {
-                            val pixel = pixels[(x + dx) + (y + dy) * w]
-                            average[0] += Color.alpha(pixel)
-                            average[1] += Color.red(pixel)
-                            average[2] += Color.green(pixel)
-                            average[3] += Color.blue(pixel)
+            // 平均化フィルタ
+            // average filter
+            for (pos in pos_list) {
+                val left = pos[0]
+                val top = pos[1]
+                val right = pos[2]
+                val bottom = pos[3]
+                for (x in left..right) {
+                    for (y in top..bottom) {
+                        var average = intArrayOf(0, 0, 0, 0)
+                        for (dx in (-ks_half)..ks_half) {
+                            for (dy in (-ks_half)..ks_half) {
+                                val pixel = pixels[(x + dx) + (y + dy) * w]
+                                average[0] += Color.alpha(pixel)
+                                average[1] += Color.red(pixel)
+                                average[2] += Color.green(pixel)
+                                average[3] += Color.blue(pixel)
+                            }
                         }
+                        pixels[x + y * w] = Color.argb(
+                                (average[0].toFloat() / kernel_sum).toInt(),
+                                (average[1].toFloat() / kernel_sum).toInt(),
+                                (average[2].toFloat() / kernel_sum).toInt(),
+                                (average[3].toFloat() / kernel_sum).toInt())
                     }
-                    pixels[x + y * w] = Color.argb(
-                            (average[0].toFloat() / kernel_sum).toInt(),
-                            (average[1].toFloat() / kernel_sum).toInt(),
-                            (average[2].toFloat() / kernel_sum).toInt(),
-                            (average[3].toFloat() / kernel_sum).toInt())
                 }
             }
         }
+        // モザイク処理後の画素情報を image にセット
         image!!.setPixels(pixels, 0, w, 0, 0, w, h)
-
-        image?.let {
-
-            val photoView = findViewById<ImageView>(R.id.photo_view2)
-
-            progressBar.visibility = View.GONE
-
-            photoView.setImageBitmap(image)
-        }
+        // プログレスバーを非表示にする
+        progressBar.visibility = View.GONE
+        // ImageView に描画
+        val photoView = findViewById<ImageView>(R.id.photo_view2)
+        photoView.setImageBitmap(image)
     }
 
-    fun drawingWithMosaic(_image : Bitmap, facePos_list : Array<Array<Int>>, smileProb_list : FloatArray, eyeOpenProb_list : Array<Array<Float>>){
+
+    //　顔に表情に応じたふなっしーを被せた写真を描画
+    // Draw the image which faces are covered with some facial expressions of funassi.
+    fun drawingWithMask(_image : Bitmap, facePos_list : Array<Array<Int>>,
+                          smileProb_list : FloatArray, eyeOpenProb_list : Array<Array<Float>>){
+
         var paint : Paint = Paint()
+
+        // mutale な画像を取得し Canvas を作成
+        // Get the mutable image and make a Canvas
         image = _image.copy(_image.getConfig(), true)
-        image?.let{
-            var canvas: Canvas = Canvas(image!!)
-            val mask_normal = BitmapFactory.decodeResource(getResources(), R.drawable.funassi_normal)
-            val mask_smile = BitmapFactory.decodeResource(getResources(), R.drawable.funassi_smile)
-            val mask_eyeclosed = BitmapFactory.decodeResource(getResources(), R.drawable.funassi_eyeclosed)
-            val num_faces = smileProb_list.size
+        var canvas: Canvas = Canvas(image!!)
 
-            if (num_faces != 0){
-                for (i in 0..(num_faces-1)) {
-                    val left = facePos_list[i][0]
-                    val top = facePos_list[i][1]
-                    val right = facePos_list[i][2]
-                    val bottom = facePos_list[i][3]
+        // 各表情に対応したふなっしー画像を Bitmap で取得
+        val mask_normal = BitmapFactory.decodeResource(getResources(), R.drawable.funassi_normal)
+        val mask_smile = BitmapFactory.decodeResource(getResources(), R.drawable.funassi_smile)
+        val mask_eyeclosed = BitmapFactory.decodeResource(getResources(), R.drawable.funassi_eyeclosed)
 
-                    val dest = Rect(left, top, right, bottom)
-                    if (smileProb_list[i] >= 0.7) {
-                        val src = Rect(0, 0, mask_smile.getWidth(), mask_smile.getHeight())
-                        canvas.drawBitmap(mask_smile, src, dest, paint)
-                    } else if ((eyeOpenProb_list[i][0] < 0.2) or (eyeOpenProb_list[i][1] < 0.2)) {
-                        if (eyeOpenProb_list[i][0] + eyeOpenProb_list[i][1] < 0.5) {
-                            val src = Rect(0, 0, mask_eyeclosed.getWidth(), mask_eyeclosed.getHeight())
-                            canvas.drawBitmap(mask_eyeclosed, src, dest, paint)
-                        }
+        val num_faces = smileProb_list.size
+        if (num_faces != 0){
+            for (i in 0..(num_faces-1)) {
+                val left = facePos_list[i][0]
+                val top = facePos_list[i][1]
+                val right = facePos_list[i][2]
+                val bottom = facePos_list[i][3]
 
-                    } else {
-                        val src = Rect(0, 0, mask_normal.getWidth(), mask_normal.getHeight())
-                        canvas.drawBitmap(mask_normal, src, dest, paint)
+                // ふなっしーの描画範囲
+                val dest = Rect(left, top, right, bottom)
+
+                // 笑ってたら笑顔のふなっしーを被せる
+                // If a person is smiling, put the smiling funassi.
+                if (smileProb_list[i] >= 0.7) {
+                    val src = Rect(0, 0, mask_smile.getWidth(), mask_smile.getHeight())
+                    canvas.drawBitmap(mask_smile, src, dest, paint) //
+                }
+                // 目が閉じてたら目をとじたふなっしーを描画
+                // If a person's eyes are closed, put the eyes-closed funassi.
+                else if ((eyeOpenProb_list[i][0] < 0.2) or (eyeOpenProb_list[i][1] < 0.2)) {
+                    if (eyeOpenProb_list[i][0] + eyeOpenProb_list[i][1] < 0.5) {
+                        val src = Rect(0, 0, mask_eyeclosed.getWidth(), mask_eyeclosed.getHeight())
+                        canvas.drawBitmap(mask_eyeclosed, src, dest, paint)
                     }
-            }
-                val photoView = findViewById<ImageView>(R.id.photo_view2)
-                progressBar.visibility = View.GONE
-                photoView.setImageBitmap(image)
+                }
+                // それ以外の場合は普通の表情のふなっしーを被せる
+                // In another Cases, put the normal funassi.
+                else {
+                    val src = Rect(0, 0, mask_normal.getWidth(), mask_normal.getHeight())
+                    canvas.drawBitmap(mask_normal, src, dest, paint)
+                }
             }
         }
+        // プログレスバーを非表示
+        progressBar.visibility = View.GONE
+        // 描画
+        val photoView = findViewById<ImageView>(R.id.photo_view2)
+        photoView.setImageBitmap(image)
     }
 
+
+    // nullかどうかをまとめて確認
     inline fun <T: Any> ifLet(vararg elements: T?, closure: (List<T>) -> Unit) {
         if (elements.all { it != null }) {
             closure(elements.filterNotNull())
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
     }
 
 }

@@ -29,10 +29,14 @@ class FrontPage : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.front_page)
 
+        //写真を撮る
+        //Take a picture
         val photoButton = findViewById<Button>(R.id.photo_button)
         photoButton.setOnClickListener {
-            val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+            // 撮影画像のURIを作成
             cameraUri = createSaveFileUri()
+            // カメラを起動
+            val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
             intent.putExtra(MediaStore.EXTRA_OUTPUT, cameraUri)
             val manager = packageManager
             val activities: List<*> = manager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
@@ -44,14 +48,14 @@ class FrontPage : AppCompatActivity() {
         }
     }
 
+
+    // 撮影写真のURIを作成
+    // Prepare the URI of the captured image.
     private fun createSaveFileUri(): Uri {
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.JAPAN).format(Date())
         val imagefilename = timestamp
 
         val storageDir = getExternalFilesDir(Environment.DIRECTORY_DCIM);
-        //if (!storageDir?.exists()){
-        //storageDir?.mkdir()
-        //}
         val file = File.createTempFile(imagefilename, ".jpg", storageDir)
         path = file.absolutePath
         return FileProvider.getUriForFile(this, "jp.ac.titech.tehhuu.face_hiding_camera", file)
@@ -66,25 +70,35 @@ class FrontPage : AppCompatActivity() {
         }
     }*/
 
+
     override fun onResume() {
         super.onResume()
+
+        //写真を撮影したら CapturedView に遷移
+        // Move to "CapturedView" after capturing a image.
         if (cameraUri != null) {
             val intent = Intent(this, CapturedView::class.java)
+            // intent に撮影写真のURI, ImageViewのサイズをセット
             intent.setData(cameraUri)
-            Log.d("debug", width_view.toString() +  " " + height_view.toString())
+            //Log.d("debug", width_view.toString() +  " " + height_view.toString())
             intent.putExtra("width_view", width_view)
             intent.putExtra("height_view", height_view)
 
+            // "CaptuerdView"から戻った時のために CameraUri を null にしておく
             cameraUri = null
             startActivity(intent)
         }
     }
 
+
+    // ImageView（撮影した写真を表示する View）のサイズを取得
+    // Get the size of Imageview which shows the captured image
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         width_view = findViewById<View>(R.id.photo_view).width
         height_view = findViewById<View>(R.id.photo_view).height
     }
+
 
     companion object {
         private const val REQ_PHOTO = 1234
