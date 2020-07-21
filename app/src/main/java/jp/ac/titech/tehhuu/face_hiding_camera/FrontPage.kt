@@ -76,7 +76,7 @@ class FrontPage : AppCompatActivity() {
 
         //写真を撮影したら CapturedView に遷移
         // Move to "CapturedView" after capturing a image.
-        if (cameraUri != null) {
+        cameraUri?.let{
             val intent = Intent(this, CapturedView::class.java)
             // intent に撮影写真のURI, ImageViewのサイズをセット
             intent.setData(cameraUri)
