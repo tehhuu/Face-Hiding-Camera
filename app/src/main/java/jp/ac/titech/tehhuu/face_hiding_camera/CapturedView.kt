@@ -201,7 +201,7 @@ class CapturedView : AppCompatActivity() {
                     .setClassificationMode(FirebaseVisionFaceDetectorOptions.ALL_CLASSIFICATIONS)
                     .build()
 
-            // FirebaseVisonImage に変換
+            // FirebaseVisionImage に変換
             val inputImage = FirebaseVisionImage.fromBitmap(image_resized)
 
             // detectorを作成
@@ -212,31 +212,31 @@ class CapturedView : AppCompatActivity() {
             detector.detectInImage(inputImage)
                         .addOnSuccessListener { faces ->
                             // Task completed successfully
-                            // [START_EXCLUDE]
-                            // [START get_face_info]
                             var mouthPos_list = arrayOf<Array<Int>>()
                             var facePos_list = arrayOf<Array<Int>>()
                             var smileProb_list = floatArrayOf()
                             var eyeOpenProb_list = arrayOf<Array<Float>>()
+                            var mouth_flag = false
 
                             for (face in faces) {
-                                // 各顔の顔周りの座標を保存
-                                val bounds = face.boundingBox
-                                facePos_list += arrayOf(bounds.left, bounds.top, bounds.right, bounds.bottom)
-
-                                // 各顔の左目・右目の開いている確率を保存
+                                mouth_flag = false
+                                
+                                // 各顔の口周りの座標を保存
                                 val flag_mouth_bottom = face.getLandmark(FirebaseVisionFaceLandmark.MOUTH_BOTTOM)
                                 val flag_mouth_left = face.getLandmark(FirebaseVisionFaceLandmark.MOUTH_LEFT)
                                 val flag_mouth_right = face.getLandmark(FirebaseVisionFaceLandmark.MOUTH_RIGHT)
                                 val flag_nose = face.getLandmark(FirebaseVisionFaceLandmark.NOSE_BASE)
                                 ifLet(flag_mouth_bottom, flag_mouth_left, flag_mouth_right, flag_nose) {
                                     (bottom, left, right, nose) ->
+                                    mouth_flag = true
                                     var mouth_bottom = bottom.position.getY().toInt()
                                     var mouth_left = left.position.getX().toInt()
                                     var mouth_right = right.position.getX().toInt()
-                                    //var mouth_top = min(left.position.getY(), right.position.getY()).toInt()
                                     var top = nose.position.getY().toInt()
                                     mouthPos_list += arrayOf(mouth_left, top, mouth_right, mouth_bottom)
+                                }
+                                if (!mouth_flag && type == "Mouth"){
+                                    continue
                                 }
 
                                 //各顔の笑顔確率を保存
@@ -244,6 +244,9 @@ class CapturedView : AppCompatActivity() {
                                     Log.d("debug", "smile")
                                     val smileProb = face.smilingProbability
                                     smileProb_list += smileProb
+                                }
+                                else{
+                                    smileProb_list +=  0f
                                 }
 
                                 // 各顔の左目・右目の開いている確率を保存
@@ -253,6 +256,13 @@ class CapturedView : AppCompatActivity() {
                                     val rightEyeOpenProb = face.rightEyeOpenProbability
                                     eyeOpenProb_list += arrayOf(leftEyeOpenProb, rightEyeOpenProb)
                                 }
+                                else{
+                                    eyeOpenProb_list += arrayOf(0.5f, 0.5f)
+                                }
+
+                                // 各顔の顔周りの座標を保存
+                                val bounds = face.boundingBox
+                                facePos_list += arrayOf(bounds.left, bounds.top, bounds.right, bounds.bottom)
                             }
 
                             // range, type に応じた描画処理を行う
@@ -272,8 +282,6 @@ class CapturedView : AppCompatActivity() {
                                     drawingWithMosaic(image_resized, mouthPos_list)
                                 }
                             }
-                            // [END get_face_info]
-                            // [END_EXCLUDE]
                         }
                         .addOnFailureListener { e ->
                             // Task failed with an exception
