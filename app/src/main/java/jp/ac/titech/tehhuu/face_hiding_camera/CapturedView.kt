@@ -61,17 +61,6 @@ class CapturedView : AppCompatActivity() {
         saveButton = findViewById<Button>(R.id.save_button)
         saveButton.setOnClickListener {
             image?.let {
-               /*//val dataDir: File
-                var f = createFile()
-                val ops = FileOutputStream(f)
-                image!!.compress(Bitmap.CompressFormat.PNG, 100, ops)
-                ops.close()
-                val contentValues = ContentValues().apply {
-                    put(MediaStore.Images.Media.MIME_TYPE, "image/png")
-                    put("_data", f.absolutePath)
-                }
-                contentResolver.insert(
-                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)*/
                 saveImage(image!!, this, "Camera")
                 Toast.makeText(this, "Saved!!", Toast.LENGTH_LONG).show()
             }
@@ -379,19 +368,17 @@ class CapturedView : AppCompatActivity() {
                 // ふなっしーの描画範囲
                 val dest = Rect(left, top, right, bottom)
 
-                // 笑ってたら笑顔のふなっしーを被せる
-                // If a person is smiling, put the smiling funassi.
-                if (smileProb_list[i] >= 0.7) {
-                    val src = Rect(0, 0, mask_smile.getWidth(), mask_smile.getHeight())
-                    canvas.drawBitmap(mask_smile, src, dest, paint) //
-                }
                 // 目が閉じてたら目をとじたふなっしーを描画
                 // If a person's eyes are closed, put the eyes-closed funassi.
-                else if ((eyeOpenProb_list[i][0] < 0.2) or (eyeOpenProb_list[i][1] < 0.2)) {
-                    if (eyeOpenProb_list[i][0] + eyeOpenProb_list[i][1] < 0.5) {
+                if ((eyeOpenProb_list[i][0] < 0.3) or (eyeOpenProb_list[i][1] < 0.3)) {
                         val src = Rect(0, 0, mask_eyeclosed.getWidth(), mask_eyeclosed.getHeight())
                         canvas.drawBitmap(mask_eyeclosed, src, dest, paint)
-                    }
+                }
+                // 笑ってたら笑顔のふなっしーを被せる
+                // If a person is smiling, put the smiling funassi.
+                else if (smileProb_list[i] >= 0.7) {
+                    val src = Rect(0, 0, mask_smile.getWidth(), mask_smile.getHeight())
+                    canvas.drawBitmap(mask_smile, src, dest, paint) //
                 }
                 // それ以外の場合は普通の表情のふなっしーを被せる
                 // In another Cases, put the normal funassi.
